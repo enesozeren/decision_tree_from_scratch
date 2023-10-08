@@ -1,0 +1,121 @@
+import numpy as np
+from collections import Counter
+from treenode import TreeNode
+
+
+class DecisionTree():
+
+    def __init__(self, max_leaves=6) -> None:
+        self.max_leaves = max_leaves
+        self.tree_info = {}
+
+    def entropy(self, class_probabilities: list) -> float:
+        return sum([-p * np.log2(p) for p in class_probabilities if p>0])
+    
+    def class_probabilities(self, labels: list) -> list:
+        total_count = len(labels)
+        return [label_count / total_count for label_count in Counter(labels).values()]
+    
+    def data_entropy(self, labels: list) -> float:
+        return self.entropy(self.class_probabilities(labels))
+    
+    def partition_entropy(self, subsets: list) -> float:
+        """
+            subsets = list of label lists ( EX: [[1,0,0], [1,1,1], [0,0,1,0,0]] )
+        """
+        total_count = sum([len(subset) for subset in subsets])
+        return sum([self.data_entropy(subset) * (len(subset) / total_count) for subset in subsets])
+    
+    def split(self, data, feature_idx, feature_val):
+        
+        mask_below_threshold = data[:, feature_idx] < feature_val
+        group1 = data[mask_below_threshold]
+        group2 = data[~mask_below_threshold]
+
+        return group1, group2
+        
+    def find_best_split(self, data):
+        """
+        Finds the best split (with the lowest entropy) given data
+        Returns 2 splitted groups
+        """
+        min_entropy = 1e6
+        min_entropy_feature_idx = None
+        min_entropy_feature_val = None
+
+        for idx in range(data.shape[1]-1):
+            feature_val = np.median(data[:, idx])
+            g1, g2 = self.split(data, idx, feature_val)
+            entropy = self.partition_entropy([g1[:, -1], g2[:, -1]])
+            if entropy < min_entropy:
+                min_entropy = entropy
+                min_entropy_feature_idx = idx
+                min_entropy_feature_val = feature_val
+                g1_min, g2_min = g1, g2
+
+        return g1_min, g2_min, min_entropy_feature_idx, min_entropy_feature_val
+
+    def is_stop_criterions_satisfied(self) -> bool:
+        """
+        Checks if any of the stopping criterions are satisfied
+        """
+        return (self.tree_info['numb_of_nodes'] >= self.max_leaves)
+
+    def create_tree(self, data):
+        # Initialize a list-based queue for breadth-first traversal
+        node_queue = []
+        
+        # Create the root node
+        split_1_data, split_2_data, split_feature_idx, split_feature_val = self.find_best_split(data)
+        root = TreeNode(data, split_feature_idx, split_feature_val)
+        node_queue.append(root)
+        
+        while node_queue:
+            current_node = node_queue.pop(0)  # Dequeue the front element
+            
+            # Stop if criteria satisfied for this node
+            if self.is_stop_criterions_satisfied():
+                continue  # Move on to the next node in the queue
+            
+            # Continue creating nodes
+            split_1_data, split_2_data, _, _ = self.find_best_split(current_node.data)
+
+            _, _, left_split_feature_idx, left_split_feature_val = self.find_best_split(split_1_data)
+            current_node.left = TreeNode(split_1_data, left_split_feature_idx, left_split_feature_val)
+            
+            _, _, right_split_feature_idx, right_split_feature_val = self.find_best_split(split_2_data)
+            current_node.right = TreeNode(split_2_data, right_split_feature_idx, right_split_feature_val)
+            
+            # Update tree_info
+            self.tree_info['numb_of_nodes'] += 2  # Two children are added
+            
+            # Add child nodes to the queue for processing
+            node_queue.append(current_node.left)
+            node_queue.append(current_node.right)
+        
+        return root
+
+    def train(self, X_train, Y_train):
+        
+        # Concat features and labels
+        train_data = np.concatenate((X_train, np.reshape(Y_train, (-1, 1))), axis=1)
+
+        # Initialize the tree information
+        self.tree_info['numb_of_nodes'] = 0
+
+        self.tree = self.create_tree(train_data)
+
+    def predict(self, X_test):
+        pass
+
+    def print_recursive(self, node, level=0):
+        if node != None:
+            self.print_recursive(node.left, level + 1)
+            print('    ' * 4 * level + '-> ' \
+                  + ' Idx=' + str(node.feature_idx) + ' ' \
+                    + ' Val=' + str(round(node.feature_val, 2))\
+                        + ' Labels=' + str(np.unique(node.data[:,-1], return_counts=True)))
+            self.print_recursive(node.right, level + 1)
+
+    def print_tree(self):
+        self.print_recursive(self.tree)
