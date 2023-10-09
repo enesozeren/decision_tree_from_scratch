@@ -4,6 +4,11 @@ from treenode import TreeNode
 
 
 class DecisionTree():
+    """
+    Decision Tree Classifier
+    Training: Use "train" function with train set features and labels
+    Predicting: Use "predict" function with test set features
+    """
 
     def __init__(self, max_depth=4, min_samples_leaf=1) -> None:
         self.max_depth = max_depth
@@ -56,19 +61,39 @@ class DecisionTree():
 
         return g1_min, g2_min, min_entropy_feature_idx, min_entropy_feature_val
 
+    def find_label_probs(self, data):
+
+        labels_as_integers = data[:,-1].astype(int)
+        # Calculate the total number of labels
+        total_labels = len(labels_as_integers)
+        # Calculate the ratios (probabilities) for each label
+        label_probabilities = np.zeros(len(self.labels_in_train), dtype=float)
+
+        # Populate the label_probabilities array based on the specific labels
+        for i, label in enumerate(self.labels_in_train):
+            label_index = np.where(labels_as_integers == i)[0]
+            if len(label_index) > 0:
+                label_probabilities[i] = len(label_index) / total_labels
+
+        return label_probabilities
+
     def create_tree(self, data, current_depth):
         
         # Check if the max depth has been reached
         if current_depth >= self.max_depth:
             return None
         
-        # Create the node
+        # Find best split
         split_1_data, split_2_data, split_feature_idx, split_feature_val = self.find_best_split(data)
-        node_prediction = Counter(list(data[:,-1])).most_common(1)[0][0]
-        node = TreeNode(data, split_feature_idx, split_feature_val, node_prediction)
-        current_depth += 1
+        
+        # Find label probs for the node
+        label_probabilities = self.find_label_probs(data)
+
+        # Create node
+        node = TreeNode(data, split_feature_idx, split_feature_val, label_probabilities)
 
         # Check if the min_samples_leaf has been satisfied
+        current_depth += 1
         if self.min_samples_leaf > split_1_data.shape[0] or self.min_samples_leaf > split_2_data.shape[0]:
             return node        
 
@@ -83,18 +108,18 @@ class DecisionTree():
 
         # Finds the leaf which X belongs
         while node:
-            
-            pred = node.prediction
+            pred_probs = node.prediction_probs
             if X[node.feature_idx] < node.feature_val:
                 node = node.left
             else:
                 node = node.right
 
-        return pred
+        return pred_probs
 
     def train(self, X_train, Y_train):
         
         # Concat features and labels
+        self.labels_in_train = np.unique(Y_train)
         train_data = np.concatenate((X_train, np.reshape(Y_train, (-1, 1))), axis=1)
 
         # Initialize the tree information
@@ -102,21 +127,29 @@ class DecisionTree():
 
         self.tree = self.create_tree(data=train_data, current_depth=0)
 
-    def predict(self, X_set):
-        """Returns the predictions for a given data set"""
+    def predict_proba(self, X_set):
+        """Returns the predicted probs for a given data set"""
 
-        predictions = np.apply_along_axis(self.predict_one_sample, 1, X_set)
+        pred_probs = np.apply_along_axis(self.predict_one_sample, 1, X_set)
         
-        return predictions
+        return pred_probs
+
+    def predict(self, X_set):
+        """Returns the predicted probs for a given data set"""
+
+        pred_probs = self.predict_proba(X_set)
+        preds = np.argmax(pred_probs, axis=1)
+        
+        return preds    
 
     def print_recursive(self, node, level=0):
         if node != None:
             self.print_recursive(node.left, level + 1)
             print('    ' * 4 * level + '-> ' \
                   + ' Idx=' + str(node.feature_idx) + ' ' \
-                    + ' Val=' + str(round(node.feature_val, 2))\
-                        + ' Labels=' + str(np.unique(node.data[:,-1], return_counts=True))\
-                        + ' Pred=' + str(node.prediction)
+                    + ' Val=' + str(round(node.feature_val, 2)) \
+                        + ' Labels=' + str(np.unique(node.data[:,-1], return_counts=True)) \
+                            + ' Pred Probs=' + str(node.prediction_probs)
                         )
             self.print_recursive(node.right, level + 1)
 

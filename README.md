@@ -1,2 +1,2 @@
 # decision_tree_from_scratch
-Building a decision tree from scratch with python
+Building a decision tree classifier from scratch with python
