@@ -64,7 +64,8 @@ class DecisionTree():
         
         # Create the node
         split_1_data, split_2_data, split_feature_idx, split_feature_val = self.find_best_split(data)
-        node = TreeNode(data, split_feature_idx, split_feature_val)
+        node_prediction = Counter(list(data[:,-1])).most_common(1)[0][0]
+        node = TreeNode(data, split_feature_idx, split_feature_val, node_prediction)
         current_depth += 1
 
         # Check if the min_samples_leaf has been satisfied
@@ -75,6 +76,21 @@ class DecisionTree():
         node.right = self.create_tree(split_2_data, current_depth)
         
         return node
+    
+    def predict_one_sample(self, X):
+        """Returns prediction for 1 dim array"""
+        node = self.tree
+
+        # Finds the leaf which X belongs
+        while node:
+            
+            pred = node.prediction
+            if X[node.feature_idx] < node.feature_val:
+                node = node.left
+            else:
+                node = node.right
+
+        return pred
 
     def train(self, X_train, Y_train):
         
@@ -86,8 +102,12 @@ class DecisionTree():
 
         self.tree = self.create_tree(data=train_data, current_depth=0)
 
-    def predict(self, X_test):
-        pass
+    def predict(self, X_set):
+        """Returns the predictions for a given data set"""
+
+        predictions = np.apply_along_axis(self.predict_one_sample, 1, X_set)
+        
+        return predictions
 
     def print_recursive(self, node, level=0):
         if node != None:
@@ -95,7 +115,9 @@ class DecisionTree():
             print('    ' * 4 * level + '-> ' \
                   + ' Idx=' + str(node.feature_idx) + ' ' \
                     + ' Val=' + str(round(node.feature_val, 2))\
-                        + ' Labels=' + str(np.unique(node.data[:,-1], return_counts=True)))
+                        + ' Labels=' + str(np.unique(node.data[:,-1], return_counts=True))\
+                        + ' Pred=' + str(node.prediction)
+                        )
             self.print_recursive(node.right, level + 1)
 
     def print_tree(self):

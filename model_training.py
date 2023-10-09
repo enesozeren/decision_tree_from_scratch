@@ -12,3 +12,8 @@ X_train, X_test, Y_train, Y_test = model_selection.train_test_split(X, Y, test_s
 my_tree = DecisionTree()
 my_tree.train(X_train, Y_train)
 my_tree.print_tree()
+
+train_preds = my_tree.predict(X_set=X_train)
+print("Train size", len(Y_train))
+print("True preds", sum(train_preds == Y_train))
+print("Accuracy", sum(train_preds == Y_train) / len(Y_train))
