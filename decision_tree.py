@@ -5,8 +5,9 @@ from treenode import TreeNode
 
 class DecisionTree():
 
-    def __init__(self, max_leaves=6) -> None:
-        self.max_leaves = max_leaves
+    def __init__(self, max_depth=4, min_samples_leaf=1) -> None:
+        self.max_depth = max_depth
+        self.min_samples_leaf = min_samples_leaf
         self.tree_info = {}
 
     def entropy(self, class_probabilities: list) -> float:
@@ -55,45 +56,25 @@ class DecisionTree():
 
         return g1_min, g2_min, min_entropy_feature_idx, min_entropy_feature_val
 
-    def is_stop_criterions_satisfied(self) -> bool:
-        """
-        Checks if any of the stopping criterions are satisfied
-        """
-        return (self.tree_info['numb_of_nodes'] >= self.max_leaves)
-
-    def create_tree(self, data):
-        # Initialize a list-based queue for breadth-first traversal
-        node_queue = []
+    def create_tree(self, data, current_depth):
         
-        # Create the root node
+        # Check if the max depth has been reached
+        if current_depth >= self.max_depth:
+            return None
+        
+        # Create the node
         split_1_data, split_2_data, split_feature_idx, split_feature_val = self.find_best_split(data)
-        root = TreeNode(data, split_feature_idx, split_feature_val)
-        node_queue.append(root)
-        
-        while node_queue:
-            current_node = node_queue.pop(0)  # Dequeue the front element
-            
-            # Stop if criteria satisfied for this node
-            if self.is_stop_criterions_satisfied():
-                continue  # Move on to the next node in the queue
-            
-            # Continue creating nodes
-            split_1_data, split_2_data, _, _ = self.find_best_split(current_node.data)
+        node = TreeNode(data, split_feature_idx, split_feature_val)
+        current_depth += 1
 
-            _, _, left_split_feature_idx, left_split_feature_val = self.find_best_split(split_1_data)
-            current_node.left = TreeNode(split_1_data, left_split_feature_idx, left_split_feature_val)
-            
-            _, _, right_split_feature_idx, right_split_feature_val = self.find_best_split(split_2_data)
-            current_node.right = TreeNode(split_2_data, right_split_feature_idx, right_split_feature_val)
-            
-            # Update tree_info
-            self.tree_info['numb_of_nodes'] += 2  # Two children are added
-            
-            # Add child nodes to the queue for processing
-            node_queue.append(current_node.left)
-            node_queue.append(current_node.right)
+        # Check if the min_samples_leaf has been satisfied
+        if self.min_samples_leaf > split_1_data.shape[0] or self.min_samples_leaf > split_2_data.shape[0]:
+            return node        
+
+        node.left = self.create_tree(split_1_data, current_depth)
+        node.right = self.create_tree(split_2_data, current_depth)
         
-        return root
+        return node
 
     def train(self, X_train, Y_train):
         
@@ -101,9 +82,9 @@ class DecisionTree():
         train_data = np.concatenate((X_train, np.reshape(Y_train, (-1, 1))), axis=1)
 
         # Initialize the tree information
-        self.tree_info['numb_of_nodes'] = 0
+        self.tree_info['depth'] = 0
 
-        self.tree = self.create_tree(train_data)
+        self.tree = self.create_tree(data=train_data, current_depth=0)
 
     def predict(self, X_test):
         pass
