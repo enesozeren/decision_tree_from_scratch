@@ -141,17 +141,23 @@ class DecisionTree():
         preds = np.argmax(pred_probs, axis=1)
         
         return preds    
-
+        
     def print_recursive(self, node, level=0):
         if node != None:
             self.print_recursive(node.left, level + 1)
-            print('    ' * 4 * level + '-> ' \
-                  + ' Idx=' + str(node.feature_idx) + ' ' \
-                    + ' Val=' + str(round(node.feature_val, 2)) \
-                        + ' Labels=' + str(np.unique(node.data[:,-1], return_counts=True)) \
-                            + ' Pred Probs=' + str(node.prediction_probs)
-                        )
+            unique_values, value_counts = np.unique(node.data[:,-1], return_counts=True)
+            output = ", ".join([f"{value}->{count}" for value, count in zip(unique_values, value_counts)])
+
+            if (node.left and node.right):
+                print('    ' * 4 * level + '-> ' \
+                    + ' Node: ' + str(node.node_def) + ' ' )
+            else:
+                print('    ' * 4 * level + '-> ' \
+                      + ' LEAF: '
+                        + ' Labels Count=' + output \
+                            + ' Pred Probs=' + str(node.prediction_probs))                
+                                
             self.print_recursive(node.right, level + 1)
 
     def print_tree(self):
-        self.print_recursive(self.tree)
+        self.print_recursive(node=self.tree)
