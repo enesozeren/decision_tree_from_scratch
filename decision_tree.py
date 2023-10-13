@@ -13,7 +13,6 @@ class DecisionTree():
     def __init__(self, max_depth=4, min_samples_leaf=1) -> None:
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
-        self.tree_info = {}
 
     def entropy(self, class_probabilities: list) -> float:
         return sum([-p * np.log2(p) for p in class_probabilities if p>0])
@@ -122,9 +121,7 @@ class DecisionTree():
         self.labels_in_train = np.unique(Y_train)
         train_data = np.concatenate((X_train, np.reshape(Y_train, (-1, 1))), axis=1)
 
-        # Initialize the tree information
-        self.tree_info['depth'] = 0
-
+        # Start creating the tree
         self.tree = self.create_tree(data=train_data, current_depth=0)
 
     def predict_proba(self, X_set: np.array) -> np.array:
