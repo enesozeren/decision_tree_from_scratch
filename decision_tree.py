@@ -32,7 +32,7 @@ class DecisionTree():
         total_count = sum([len(subset) for subset in subsets])
         return sum([self.data_entropy(subset) * (len(subset) / total_count) for subset in subsets])
     
-    def split(self, data: np.array, feature_idx: int, feature_val: float):
+    def split(self, data: np.array, feature_idx: int, feature_val: float) -> tuple:
         
         mask_below_threshold = data[:, feature_idx] < feature_val
         group1 = data[mask_below_threshold]
