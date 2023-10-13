@@ -92,10 +92,10 @@ class DecisionTree():
         node = TreeNode(data, split_feature_idx, split_feature_val, label_probabilities)
 
         # Check if the min_samples_leaf has been satisfied
-        current_depth += 1
         if self.min_samples_leaf > split_1_data.shape[0] or self.min_samples_leaf > split_2_data.shape[0]:
             return node        
 
+        current_depth += 1
         node.left = self.create_tree(split_1_data, current_depth)
         node.right = self.create_tree(split_2_data, current_depth)
         
