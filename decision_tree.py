@@ -32,7 +32,7 @@ class DecisionTree():
         total_count = sum([len(subset) for subset in subsets])
         return sum([self.data_entropy(subset) * (len(subset) / total_count) for subset in subsets])
     
-    def split(self, data, feature_idx, feature_val):
+    def split(self, data: np.array, feature_idx: int, feature_val: float):
         
         mask_below_threshold = data[:, feature_idx] < feature_val
         group1 = data[mask_below_threshold]
@@ -40,7 +40,7 @@ class DecisionTree():
 
         return group1, group2
         
-    def find_best_split(self, data):
+    def find_best_split(self, data: np.array) -> tuple:
         """
         Finds the best split (with the lowest entropy) given data
         Returns 2 splitted groups
@@ -61,7 +61,7 @@ class DecisionTree():
 
         return g1_min, g2_min, min_entropy_feature_idx, min_entropy_feature_val
 
-    def find_label_probs(self, data):
+    def find_label_probs(self, data: np.array) -> np.array:
 
         labels_as_integers = data[:,-1].astype(int)
         # Calculate the total number of labels
@@ -77,7 +77,7 @@ class DecisionTree():
 
         return label_probabilities
 
-    def create_tree(self, data, current_depth):
+    def create_tree(self, data: np.array, current_depth: int) -> TreeNode:
         
         # Check if the max depth has been reached
         if current_depth >= self.max_depth:
@@ -102,7 +102,7 @@ class DecisionTree():
         
         return node
     
-    def predict_one_sample(self, X):
+    def predict_one_sample(self, X: np.array) -> np.array:
         """Returns prediction for 1 dim array"""
         node = self.tree
 
@@ -116,7 +116,7 @@ class DecisionTree():
 
         return pred_probs
 
-    def train(self, X_train, Y_train):
+    def train(self, X_train: np.array, Y_train: np.array) -> None:
         
         # Concat features and labels
         self.labels_in_train = np.unique(Y_train)
@@ -127,14 +127,14 @@ class DecisionTree():
 
         self.tree = self.create_tree(data=train_data, current_depth=0)
 
-    def predict_proba(self, X_set):
+    def predict_proba(self, X_set: np.array) -> np.array:
         """Returns the predicted probs for a given data set"""
 
         pred_probs = np.apply_along_axis(self.predict_one_sample, 1, X_set)
         
         return pred_probs
 
-    def predict(self, X_set):
+    def predict(self, X_set: np.array) -> np.array:
         """Returns the predicted probs for a given data set"""
 
         pred_probs = self.predict_proba(X_set)
@@ -142,7 +142,7 @@ class DecisionTree():
         
         return preds    
         
-    def print_recursive(self, node, level=0):
+    def print_recursive(self, node: TreeNode, level=0) -> None:
         if node != None:
             self.print_recursive(node.left, level + 1)
             unique_values, value_counts = np.unique(node.data[:,-1], return_counts=True)
@@ -159,5 +159,5 @@ class DecisionTree():
                                 
             self.print_recursive(node.right, level + 1)
 
-    def print_tree(self):
+    def print_tree(self) -> None:
         self.print_recursive(node=self.tree)
