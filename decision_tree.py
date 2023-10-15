@@ -10,9 +10,10 @@ class DecisionTree():
     Predicting: Use "predict" function with test set features
     """
 
-    def __init__(self, max_depth=4, min_samples_leaf=1) -> None:
+    def __init__(self, max_depth=4, min_samples_leaf=1, min_information_gain=0.0) -> None:
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
+        self.min_information_gain = min_information_gain
 
     def entropy(self, class_probabilities: list) -> float:
         return sum([-p * np.log2(p) for p in class_probabilities if p>0])
@@ -78,7 +79,7 @@ class DecisionTree():
 
     def create_tree(self, data: np.array, current_depth: int) -> TreeNode:
         
-        # Check if the max depth has been reached
+        # Check if the max depth has been reached (stopping criteria)
         if current_depth >= self.max_depth:
             return None
         
@@ -88,14 +89,19 @@ class DecisionTree():
         # Find label probs for the node
         label_probabilities = self.find_label_probs(data)
 
-        # Create node
+        # Calculate information gain
         node_entropy = self.entropy(label_probabilities)
         information_gain = node_entropy - split_entropy
+        
+        # Create node
         node = TreeNode(data, split_feature_idx, split_feature_val, label_probabilities, information_gain)
 
-        # Check if the min_samples_leaf has been satisfied
+        # Check if the min_samples_leaf has been satisfied (stopping criteria)
         if self.min_samples_leaf > split_1_data.shape[0] or self.min_samples_leaf > split_2_data.shape[0]:
-            return node        
+            return node
+        # Check if the min_information_gain has been satisfied (stopping criteria)
+        elif information_gain < self.min_information_gain:
+            return node
 
         current_depth += 1
         node.left = self.create_tree(split_1_data, current_depth)
