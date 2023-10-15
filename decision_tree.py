@@ -44,21 +44,21 @@ class DecisionTree():
         Finds the best split (with the lowest entropy) given data
         Returns 2 splitted groups
         """
-        min_entropy = 1e6
+        min_part_entropy = 1e6
         min_entropy_feature_idx = None
         min_entropy_feature_val = None
 
         for idx in range(data.shape[1]-1):
             feature_val = np.median(data[:, idx])
             g1, g2 = self.split(data, idx, feature_val)
-            entropy = self.partition_entropy([g1[:, -1], g2[:, -1]])
-            if entropy < min_entropy:
-                min_entropy = entropy
+            part_entropy = self.partition_entropy([g1[:, -1], g2[:, -1]])
+            if part_entropy < min_part_entropy:
+                min_part_entropy = part_entropy
                 min_entropy_feature_idx = idx
                 min_entropy_feature_val = feature_val
                 g1_min, g2_min = g1, g2
 
-        return g1_min, g2_min, min_entropy_feature_idx, min_entropy_feature_val
+        return g1_min, g2_min, min_entropy_feature_idx, min_entropy_feature_val, min_part_entropy
 
     def find_label_probs(self, data: np.array) -> np.array:
 
@@ -83,13 +83,15 @@ class DecisionTree():
             return None
         
         # Find best split
-        split_1_data, split_2_data, split_feature_idx, split_feature_val = self.find_best_split(data)
+        split_1_data, split_2_data, split_feature_idx, split_feature_val, split_entropy = self.find_best_split(data)
         
         # Find label probs for the node
         label_probabilities = self.find_label_probs(data)
 
         # Create node
-        node = TreeNode(data, split_feature_idx, split_feature_val, label_probabilities)
+        node_entropy = self.entropy(label_probabilities)
+        information_gain = node_entropy - split_entropy
+        node = TreeNode(data, split_feature_idx, split_feature_val, label_probabilities, information_gain)
 
         # Check if the min_samples_leaf has been satisfied
         if self.min_samples_leaf > split_1_data.shape[0] or self.min_samples_leaf > split_2_data.shape[0]:
@@ -142,18 +144,7 @@ class DecisionTree():
     def print_recursive(self, node: TreeNode, level=0) -> None:
         if node != None:
             self.print_recursive(node.left, level + 1)
-            unique_values, value_counts = np.unique(node.data[:,-1], return_counts=True)
-            output = ", ".join([f"{value}->{count}" for value, count in zip(unique_values, value_counts)])
-
-            if (node.left and node.right):
-                print('    ' * 4 * level + '-> ' \
-                    + ' Node: ' + str(node.node_def) + ' ' )
-            else:
-                print('    ' * 4 * level + '-> ' \
-                      + ' LEAF: '
-                        + ' Labels Count=' + output \
-                            + ' Pred Probs=' + str(node.prediction_probs))                
-                                
+            print('    ' * 4 * level + '-> ' + node.node_def())                                
             self.print_recursive(node.right, level + 1)
 
     def print_tree(self) -> None:
